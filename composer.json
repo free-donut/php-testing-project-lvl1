@@ -1,0 +1,17 @@
+{
+    "name": "hexlet/code",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Hexlet\\Code\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "free-donut",
+            "email": "yula@freedonut.space"
+        }
+    ],
+    "require": {}
+}
