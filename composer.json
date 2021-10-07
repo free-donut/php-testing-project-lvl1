@@ -15,6 +15,7 @@
     ],
     "require": {
         "guzzlehttp/guzzle": "^7.3",
-        "docopt/docopt": "^1.0"
+        "docopt/docopt": "^1.0",
+        "mikey179/vfsstream": "^1.6"
     }
 }
