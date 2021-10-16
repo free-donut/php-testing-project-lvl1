@@ -70,6 +70,6 @@ class PageLoaderTest extends TestCase
         $this->assertTrue($this->root->hasChild($path . DIRECTORY_SEPARATOR . $expectedFileName));
         //проверить содержимое файла
         $actualDdata = file_get_contents($actualFilePath);
-        $this->assertStringEqualsFile($this->getFixtureFullPath('test.html'), $actualDdata);
+        $this->assertStringEqualsFile($pathToData, $actualDdata);
     }
 }
