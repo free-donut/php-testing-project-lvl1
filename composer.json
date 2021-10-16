@@ -4,8 +4,12 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Hexlet\\Code\\": "src/"
-        }
+            "Hexlet\\Code\\": "src/",
+            "Hexlet\\Code\\Tests\\": "tests/"
+        },
+        "files": [
+        "src/PageLoader.php"
+    ]
     },
     "authors": [
         {
@@ -24,6 +28,8 @@
     },
     "scripts": {
         "phpcs": "phpcs",
-        "phpcbf": "phpcbf"
+        "phpcbf": "phpcbf",
+        "phpunit": "phpunit",
+        "test": "phpunit tests"
     }
 }
