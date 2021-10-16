@@ -17,12 +17,15 @@ class PageLoaderTest extends TestCase
      */
     private $root;
 
-    private $client;
+    /**
+     * @var MockHandler
+     */
+    private $mock;
 
     /**
-     * @var string
+     * @var Client
      */
-    private $url;
+    private $client;
 
     /**
      * @var PageLoader
@@ -32,17 +35,11 @@ class PageLoaderTest extends TestCase
     public function setUp(): void
     {
         $this->root = vfsStream::setup('root');
-        $this->url = 'https://ru.hexlet.io/courses';
         $this->pageLoader = new PageLoader();
-
-        $pathToData = $this->getFixtureFullPath('test.html');
-        $data = file_get_contents($pathToData);
-
-        $mock = new MockHandler([
-            new Response(200, ['X-Foo' => 'Bar'], $data),
+        $this->mock = new MockHandler([
+            new Response(200),
         ]);
-
-        $handlerStack = HandlerStack::create($mock);
+        $handlerStack = HandlerStack::create($this->mock);
         $this->client = new Client(['handler' => $handlerStack]);
     }
 
@@ -52,25 +49,27 @@ class PageLoaderTest extends TestCase
         return realpath(implode('/', $parts));
     }
 
+
     public function testDownloadPage()
     {
+        $url = 'https://ru.hexlet.io/courses';
         $path = 'path/to/file';
-        $fillPathToFile = $this->root->url() . DIRECTORY_SEPARATOR . $path;
-        $expectedFileName = 'ru-hexlet-io-courses.html';
-        $expextedFilePath = $fillPathToFile . DIRECTORY_SEPARATOR . $expectedFileName;
-        $actualFilePath = $this->pageLoader->downloadPage($this->url, $fillPathToFile, $this->client);
+        $pathToData = $this->getFixtureFullPath('test.html');
+        $data = file_get_contents($pathToData);
+        $this->mock->reset();
+        $this->mock->append(new Response(200, ['X-Foo' => 'Bar'], $data));
+        $fullPathToFile = $this->root->url() . DIRECTORY_SEPARATOR . $path;
+
+        $actualFilePath = $this->pageLoader->downloadPage($url, $fullPathToFile, $this->client);
 
         //проверить полный путь до файла
+        $expectedFileName = 'ru-hexlet-io-courses.html';
+        $expextedFilePath = $fullPathToFile . DIRECTORY_SEPARATOR . $expectedFileName;
         $this->assertEquals($expextedFilePath, $actualFilePath);
         //проверить наличие файла в виртуальной ФС
         $this->assertTrue($this->root->hasChild($path . DIRECTORY_SEPARATOR . $expectedFileName));
         //проверить содержимое файла
         $actualDdata = file_get_contents($actualFilePath);
         $this->assertStringEqualsFile($this->getFixtureFullPath('test.html'), $actualDdata);
-    }
-
-    public function tearDown(): void
-    {
-        $this->client = null;
     }
 }
