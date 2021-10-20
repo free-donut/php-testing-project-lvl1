@@ -4,6 +4,24 @@
 ## Installation:
 
 Via Composer
-
 ``` bash
 $ composer global require free-donut/page-loader
+``` 
+
+## Usage:
+
+``` bash
+$ page-loader (-h|--help)
+```
+``` bash
+$ page-loader <url> [-o <dir>]
+```
+``` bash
+$ page-loader (-v|--version)
+```
+Options:
+  -h --help                 display help for command
+  -v --version              output the version numer
+  -o --output <dir>         output dir [default: ./]
+
+[![asciicast](https://asciinema.org/a/XY9W0lacrBWPHjAoL1KVIQ5Dk.svg)](https://asciinema.org/a/XY9W0lacrBWPHjAoL1KVIQ5Dk)
