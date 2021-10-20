@@ -2,6 +2,9 @@
     "name": "free-donut/page-loader",
     "type": "project",
     "license": "MIT",
+    "bin": [
+        "bin/page-loader"
+    ],
     "autoload": {
         "psr-4": {
             "Hexlet\\Code\\": "src/",
