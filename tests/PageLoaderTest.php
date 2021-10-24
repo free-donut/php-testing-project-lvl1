@@ -13,9 +13,29 @@ use GuzzleHttp\Psr7\Response;
 class PageLoaderTest extends TestCase
 {
     /**
+     * @var string
+     */
+    private $url;
+
+    /**
+     * @var string
+     */
+    private $expectedFileName;
+
+    /**
+     * @var string
+     */
+    private $path;
+
+    /**
      * @var vfsStreamDirectory
      */
     private $root;
+
+    /**
+     * @var string
+     */
+    private $fullPathToFile;
 
     /**
      * @var MockHandler
@@ -34,7 +54,11 @@ class PageLoaderTest extends TestCase
 
     public function setUp(): void
     {
+        $this->url = 'https://ru.hexlet.io/courses';
+        $this->expectedFileName = 'ru-hexlet-io-courses.html';
+        $this->path = 'path/to/file';
         $this->root = vfsStream::setup('root');
+        $this->fullPathToFile = $this->root->url() . DIRECTORY_SEPARATOR . $this->path;
         $this->pageLoader = new PageLoader();
         $this->mock = new MockHandler([
             new Response(200),
@@ -52,24 +76,55 @@ class PageLoaderTest extends TestCase
 
     public function testDownloadPage()
     {
-        $url = 'https://ru.hexlet.io/courses';
-        $path = 'path/to/file';
-        $pathToData = $this->getFixtureFullPath('test.html');
+        $pathToData = $this->getFixtureFullPath('data/data_simple.html');
         $data = file_get_contents($pathToData);
         $this->mock->reset();
         $this->mock->append(new Response(200, ['X-Foo' => 'Bar'], $data));
-        $fullPathToFile = $this->root->url() . DIRECTORY_SEPARATOR . $path;
-
-        $actualFilePath = $this->pageLoader->downloadPage($url, $fullPathToFile, $this->client);
+        $actualFilePath = $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
 
         //проверить полный путь до файла
-        $expectedFileName = 'ru-hexlet-io-courses.html';
-        $expextedFilePath = $fullPathToFile . DIRECTORY_SEPARATOR . $expectedFileName;
+        $expextedFilePath = $this->fullPathToFile . DIRECTORY_SEPARATOR . $this->expectedFileName;
         $this->assertEquals($expextedFilePath, $actualFilePath);
+
         //проверить наличие файла в виртуальной ФС
-        $this->assertTrue($this->root->hasChild($path . DIRECTORY_SEPARATOR . $expectedFileName));
+        $this->assertTrue($this->root->hasChild($this->path . DIRECTORY_SEPARATOR . $this->expectedFileName));
         //проверить содержимое файла
         $actualDdata = file_get_contents($actualFilePath);
-        $this->assertStringEqualsFile($pathToData, $actualDdata);
+        $pathToExpectedData = $this->getFixtureFullPath('expected/expected_simple.html');
+        $this->assertStringEqualsFile($pathToExpectedData, $actualDdata);
+    }
+
+    public function testDownloadPageWithImages()
+    {
+        $this->mock->reset();
+
+        $pathToData = $this->getFixtureFullPath('data/data_with_images.html');
+        $data = file_get_contents($pathToData);
+        $this->mock->append(new Response(200, ['X-Foo' => 'Bar'], $data));
+
+        $pathToImage = $this->getFixtureFullPath('data/img/42.jpg');
+        $imageData = file_get_contents($pathToImage);
+        $this->mock->append(new Response(200, [], $imageData));
+        $actualFilePath = $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
+
+        //проверить полный путь до файла
+        $expextedFilePath = $this->fullPathToFile . DIRECTORY_SEPARATOR . $this->expectedFileName;
+        $this->assertEquals($expextedFilePath, $actualFilePath);
+
+        //проверить наличие файла в виртуальной ФС
+        $this->assertTrue($this->root->hasChild($this->path . DIRECTORY_SEPARATOR . $this->expectedFileName));
+
+        //проверить содержимое файла
+        $actualDdata = file_get_contents($actualFilePath);
+        $pathToExpectedData = $this->getFixtureFullPath('expected/expected_with_images.html');
+        $this->assertStringEqualsFile($pathToExpectedData, $actualDdata);
+
+        //проверить наличие изображения в виртуальной ФС
+        $imagePath = $this->path . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files/ru-hexlet-io-img-42.jpg';
+        $this->assertTrue($this->root->hasChild($imagePath));
+
+        //сравнить изображения
+        $actualImageDdata = file_get_contents($pathToImage);
+        $this->assertStringEqualsFile($pathToImage, $actualImageDdata);
     }
 }
