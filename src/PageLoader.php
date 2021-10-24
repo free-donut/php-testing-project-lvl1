@@ -15,11 +15,14 @@ class PageLoader
             $pathToFiles = $path . DIRECTORY_SEPARATOR . $filesDirectory;
             $this->createDir($pathToFiles);
             foreach ($images as $image) {
-                $imageName = $this->getImageName($url, $image->src);
-                $newImageLink = $filesDirectory . DIRECTORY_SEPARATOR . $imageName;
-                $content = str_replace($image->src, $newImageLink, $content);
-                $imagePath = $path . DIRECTORY_SEPARATOR . $newImageLink;
-                $client->request('GET', $image->src, ['sink' => $imagePath]);
+                $imageUrl = $image->src;
+                if ($this->isLocalLink($imageUrl, $url)) {
+                    $imageName = $this->getImageName($url, $imageUrl);
+                    $newImageLink = $filesDirectory . DIRECTORY_SEPARATOR . $imageName;
+                    $content = str_replace($imageUrl, $newImageLink, $content);
+                    $imagePath = $path . DIRECTORY_SEPARATOR . $newImageLink;
+                    $client->request('GET', $imageUrl, ['sink' => $imagePath]);
+                }
             }
         }
         $this->createDir($path);
@@ -50,10 +53,22 @@ class PageLoader
         $formattedPath = preg_replace('/\W/', '-', parse_url($url, PHP_URL_PATH));
         return $formattedUrl . $formattedPath . '_files';
     }
-    private function getImageName($url, $path): string
+    private function getImageName($url, $imageUrl): string
     {
         $formattedUrl = preg_replace('/\W/', '-', parse_url($url, PHP_URL_HOST));
-        $formattedPath = str_replace('/', '-', $path);
+        if (filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+            $formattedPath = str_replace('/', '-', parse_url($imageUrl, PHP_URL_PATH));
+        } else {
+            $formattedPath = str_replace('/', '-', $imageUrl);
+        }
         return $formattedUrl . $formattedPath;
+    }
+
+    private function isLocalLink(string $imageUrl, string $url): bool
+    {
+        if (filter_var($imageUrl, FILTER_VALIDATE_URL) === false) {
+            return true;
+        }
+        return parse_url($imageUrl, PHP_URL_HOST) === parse_url($url, PHP_URL_HOST);
     }
 }
