@@ -121,4 +121,31 @@ class PageLoaderTest extends TestCase
         $actualImageData = file_get_contents($this->root->url() . DIRECTORY_SEPARATOR . $imagePath);
         $this->assertStringEqualsFile($pathToImage, $actualImageData);
     }
+
+    public function testDownloadPageWithResources()
+    {
+        $this->mock->reset();
+
+        $pathToData = $this->getFixtureFullPath('data/data_with_resources.html');
+        $data = file_get_contents($pathToData);
+        $this->mock->append(new Response(200, [], $data));
+
+        $pathToLinkResource = $this->getFixtureFullPath('data/resources/application.css');
+        $linkResourceData = file_get_contents($pathToLinkResource);
+        $this->mock->append(new Response(200, [], $linkResourceData));
+        $actualFilePath = $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
+
+        //проверить содержимое файла
+        $actualDdata = file_get_contents($actualFilePath);
+        $pathToExpectedData = $this->getFixtureFullPath('expected/expected_with_resources.html');
+        $this->assertStringEqualsFile($pathToExpectedData, $actualDdata);
+
+        //проверить наличие ресурса в виртуальной ФС
+        $linkResourcePath = $this->path . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files/ru-hexlet-io-resources-application.css';
+        $this->assertTrue($this->root->hasChild($linkResourcePath));
+
+        //сравнить изображения
+        $actualLinkResourseData = file_get_contents($this->root->url() . DIRECTORY_SEPARATOR . $linkResourcePath);
+        $this->assertStringEqualsFile($pathToLinkResource, $actualLinkResourseData);
+    }
 }
