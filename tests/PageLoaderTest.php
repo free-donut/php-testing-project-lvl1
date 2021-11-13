@@ -88,6 +88,7 @@ class PageLoaderTest extends TestCase
 
         //проверить наличие файла в виртуальной ФС
         $this->assertTrue($this->root->hasChild($this->path . DIRECTORY_SEPARATOR . $this->expectedFileName));
+
         //проверить содержимое файла
         $actualDdata = file_get_contents($actualFilePath);
         $pathToExpectedData = $this->getFixtureFullPath('expected/expected_simple.html');
@@ -102,17 +103,10 @@ class PageLoaderTest extends TestCase
         $data = file_get_contents($pathToData);
         $this->mock->append(new Response(200, ['X-Foo' => 'Bar'], $data));
 
-        $pathToImage = $this->getFixtureFullPath('data/img/42.jpg');
+        $pathToImage = $this->getFixtureFullPath('data/resources/42.jpg');
         $imageData = file_get_contents($pathToImage);
         $this->mock->append(new Response(200, [], $imageData));
         $actualFilePath = $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
-
-        //проверить полный путь до файла
-        $expextedFilePath = $this->fullPathToFile . DIRECTORY_SEPARATOR . $this->expectedFileName;
-        $this->assertEquals($expextedFilePath, $actualFilePath);
-
-        //проверить наличие файла в виртуальной ФС
-        $this->assertTrue($this->root->hasChild($this->path . DIRECTORY_SEPARATOR . $this->expectedFileName));
 
         //проверить содержимое файла
         $actualDdata = file_get_contents($actualFilePath);
@@ -120,11 +114,11 @@ class PageLoaderTest extends TestCase
         $this->assertStringEqualsFile($pathToExpectedData, $actualDdata);
 
         //проверить наличие изображения в виртуальной ФС
-        $imagePath = $this->path . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files/ru-hexlet-io-img-42.jpg';
+        $imagePath = $this->path . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files/ru-hexlet-io-resources-42.jpg';
         $this->assertTrue($this->root->hasChild($imagePath));
 
         //сравнить изображения
-        $actualImageDdata = file_get_contents($pathToImage);
-        $this->assertStringEqualsFile($pathToImage, $actualImageDdata);
+        $actualImageData = file_get_contents($this->root->url() . DIRECTORY_SEPARATOR . $imagePath);
+        $this->assertStringEqualsFile($pathToImage, $actualImageData);
     }
 }
