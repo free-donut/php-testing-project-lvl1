@@ -133,6 +133,11 @@ class PageLoaderTest extends TestCase
         $pathToLinkResource = $this->getFixtureFullPath('data/resources/application.css');
         $linkResourceData = file_get_contents($pathToLinkResource);
         $this->mock->append(new Response(200, [], $linkResourceData));
+
+        $pathToScriptResource = $this->getFixtureFullPath('data/resources/js/runtime.js');
+        $scriptResourceData = file_get_contents($pathToScriptResource);
+        $this->mock->append(new Response(200, [], $scriptResourceData));
+
         $actualFilePath = $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
 
         //проверить содержимое файла
@@ -143,9 +148,13 @@ class PageLoaderTest extends TestCase
         //проверить наличие ресурса в виртуальной ФС
         $linkResourcePath = $this->path . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files/ru-hexlet-io-resources-application.css';
         $this->assertTrue($this->root->hasChild($linkResourcePath));
+        $scriptResourcePath = $this->path . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files/ru-hexlet-io-resources-js-runtime.js';
+        $this->assertTrue($this->root->hasChild($scriptResourcePath));
 
-        //сравнить изображения
+        //сравнить данные ресурсов
         $actualLinkResourseData = file_get_contents($this->root->url() . DIRECTORY_SEPARATOR . $linkResourcePath);
         $this->assertStringEqualsFile($pathToLinkResource, $actualLinkResourseData);
+        $actualScriptResourseData = file_get_contents($this->root->url() . DIRECTORY_SEPARATOR . $scriptResourcePath);
+        $this->assertStringEqualsFile($pathToScriptResource, $actualScriptResourseData);
     }
 }
