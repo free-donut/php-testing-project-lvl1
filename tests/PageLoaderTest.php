@@ -77,6 +77,7 @@ class PageLoaderTest extends TestCase
 
     public function testDownloadPage()
     {
+        $this->root->addChild(vfsStream::newDirectory($this->path));
         $pathToData = $this->getFixtureFullPath('data/data_simple.html');
         $data = file_get_contents($pathToData);
         $this->mock->reset();
@@ -101,6 +102,7 @@ class PageLoaderTest extends TestCase
 
     public function testDownloadPageWithImages()
     {
+        $this->root->addChild(vfsStream::newDirectory($this->path));
         $this->mock->reset();
 
         $pathToData = $this->getFixtureFullPath('data/data_with_images.html');
@@ -128,6 +130,7 @@ class PageLoaderTest extends TestCase
 
     public function testDownloadPageWithResources()
     {
+        $this->root->addChild(vfsStream::newDirectory($this->path));
         $this->mock->reset();
 
         $pathToData = $this->getFixtureFullPath('data/data_with_resources.html');
