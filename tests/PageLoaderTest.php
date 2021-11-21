@@ -9,6 +9,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
+use Monolog\Logger;
 
 class PageLoaderTest extends TestCase
 {
@@ -59,7 +60,8 @@ class PageLoaderTest extends TestCase
         $this->path = 'path/to/file';
         $this->root = vfsStream::setup('root');
         $this->fullPathToFile = $this->root->url() . DIRECTORY_SEPARATOR . $this->path;
-        $this->pageLoader = new PageLoader();
+        $stub = $this->createMock(Logger::class);
+        $this->pageLoader = new PageLoader($stub);
         $this->mock = new MockHandler([
             new Response(200),
         ]);
@@ -72,7 +74,6 @@ class PageLoaderTest extends TestCase
         $parts = [__DIR__, 'fixtures', $fixtureName];
         return realpath(implode('/', $parts));
     }
-
 
     public function testDownloadPage()
     {
@@ -88,6 +89,9 @@ class PageLoaderTest extends TestCase
 
         //проверить наличие файла в виртуальной ФС
         $this->assertTrue($this->root->hasChild($this->path . DIRECTORY_SEPARATOR . $this->expectedFileName));
+
+        //проверить отсутствие файла логов в виртуальной ФС
+        $this->assertFalse($this->root->hasChild($this->path . DIRECTORY_SEPARATOR . 'info.log"'));
 
         //проверить содержимое файла
         $actualDdata = file_get_contents($actualFilePath);
