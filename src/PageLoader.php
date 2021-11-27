@@ -19,12 +19,18 @@ class PageLoader
     {
 
         if (!is_dir($path)) {
-            throw new \Exception("Directory not found ${path}", 1);
+            throw new \Exception(sprintf('Directory "%s" not found', $path), 1);
         }
         $this->setLogger($path);
         $this->logger->info('Launching page loader', ['url' => $url, 'path' => $path]);
 
-        $content = $client->get($url)->getBody()->getContents();
+        //$content = $client->get($url)->getBody()->getContents();
+        $response = $client->get($url);
+        if (200 !== $code = $response->getStatusCode()) {
+            $this->logger->error('Uncorrected status code', ['url' => $url, 'code' => $code]);
+            throw new \Exception(sprintf('Status code is "%s"', $code), 1);
+        }
+        $content = $response->getBody()->getContents();
         $document = new Document($content);
         $filesDirectory = $this->getFilesDirectoryName($url);
         $pathToFiles = "{$path}/{$filesDirectory}";
@@ -32,7 +38,7 @@ class PageLoader
         $images = $document->find('img');
         foreach ($images as $key => $image) {
             $imageUrl = $image->src;
-            if ($this->isLocalResource($imageUrl, $url)) {
+            if ($imageUrl && $this->isLocalResource($imageUrl, $url)) {
                 $this->createDir($pathToFiles);
                 $newImageLink = $this->getResourceLink($imageUrl, $url, $filesDirectory);
                 $document->find('img')[$key]->src = $newImageLink;
@@ -45,10 +51,9 @@ class PageLoader
         $links = $document->find('link');
         foreach ($links as $key => $link) {
             $linkUrl = $link->href;
-            if ($this->isLocalResource($linkUrl, $url)) {
+            if ($linkUrl && $this->isLocalResource($linkUrl, $url)) {
                 $this->createDir($pathToFiles);
-                $isCanonicalLink = ($link->rel === 'canonical');
-                $newScriptLink = $this->getResourceLink($linkUrl, $url, $filesDirectory, $isCanonicalLink);
+                $newScriptLink = $this->getResourceLink($linkUrl, $url, $filesDirectory);
                 $document->find('link')[$key]->href = $newScriptLink;
                 $linkPath = "{$path}/{$newScriptLink}";
                 $client->request('GET', $linkUrl, ['sink' => $linkPath]);
@@ -58,16 +63,16 @@ class PageLoader
 
         $scripts = $document->find('script');
         foreach ($scripts as $key => $script) {
-            if (null !== ($scriptUrl = $script->src)) {
-                if ($this->isLocalResource($scriptUrl, $url)) {
+            $scriptUrl = $script->src;
+                if ($scriptUrl && $this->isLocalResource($scriptUrl, $url)) {
                     $this->createDir($pathToFiles);
                     $newScriptLink = $this->getResourceLink($scriptUrl, $url, $filesDirectory);
                     $document->find('script')[$key]->src = $newScriptLink;
                     $scriptPath = "{$path}/{$newScriptLink}";
+                    $resource = \GuzzleHttp\Psr7\Utils::tryFopen($scriptPath, 'w');
                     $client->request('GET', $scriptUrl, ['sink' => $scriptPath]);
                     $this->logger->info('Script data downloaded', ['url' => $scriptUrl, 'path' => $scriptPath]);
                 }
-            }
         }
 
         $content = $document->format()->html();
@@ -94,8 +99,11 @@ class PageLoader
     private function createDir($path): self
     {
         if (!is_dir($path)) {
-            mkdir($path, 0777, true);
-            $this->logger->info('Directory created', ['path' => $path]);
+            if(mkdir($path, 0777, true)) {
+                $this->logger->info('Directory created', ['path' => $path]);
+            } else {
+                $this->logger->error('Directory was not created', ['path' => $path]);
+            }
         }
         return $this;
     }
@@ -107,19 +115,15 @@ class PageLoader
         return "{$formattedHost}{$formattedPath}_files";
     }
 
-    private function getResourceLink(string $resourceUrl, string $url, string $filesDirectory, $isCanonicalLink = false): string
+    private function getResourceLink(string $resourceUrl, string $url, string $filesDirectory): string
     {
-        if ($isCanonicalLink) {
+        $resourcePath = filter_var($resourceUrl, FILTER_VALIDATE_URL) ? parse_url($resourceUrl, PHP_URL_PATH) : $resourceUrl;
+        if ($resourcePath === parse_url($url, PHP_URL_PATH)) {
             $pageFileName = $this->getPageFileName($url);
             return "{$filesDirectory}/{$pageFileName}";
         }
         $formattedHost = preg_replace('/\W/', '-', parse_url($url, PHP_URL_HOST));
-        if (filter_var($resourceUrl, FILTER_VALIDATE_URL)) {
-            $formattedPath = str_replace('/', '-', parse_url($resourceUrl, PHP_URL_PATH));
-        } else {
-            $formattedPath = str_replace('/', '-', $resourceUrl);
-        }
-
+        $formattedPath = str_replace('/', '-', $resourcePath);
         return "{$filesDirectory}/{$formattedHost}{$formattedPath}";
     }
 
