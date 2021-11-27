@@ -3,6 +3,7 @@
 
 use Hexlet\Code\PageLoader;
 use GuzzleHttp\Client;
+use Monolog\Logger;
 
 $autoloadPath1 = __DIR__ . '/../../../autoload.php';
 $autoloadPath2 = __DIR__ . '/../vendor/autoload.php';
@@ -27,13 +28,16 @@ DOC;
 
 $args = Docopt::handle($doc, array('version'=>'Page loader 1nn.0'));
 $output = $args['--output'];
+$url = $args['<url>'];
+$client = new Client();
+$logger = new Logger('INFO LOGGER');
 
 try {
-    $pageLoader = new PageLoader();
-    $client = new Client();
-    $url = $args['<url>'];
+    $pageLoader = new PageLoader($logger);
     $path = $pageLoader->downloadPage($url, $output, $client);
     print_r($path);
 } catch (\Exception $e) {
-    echo $e->getMessage();
+    fwrite(STDERR, 'Выброшено исключение:'.$e->getMessage());
+    exit($e->getCode());
+    //echo $e->getMessage();
 }

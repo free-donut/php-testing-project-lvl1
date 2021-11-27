@@ -3,11 +3,27 @@
 namespace Hexlet\Code;
 
 use DiDom\Document;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class PageLoader
 {
+    private $logger;
+
+    public function __construct(Logger $logger)
+    {
+        $this->logger = $logger;
+    }
+
     public function downloadPage($url, $path, $client): string
     {
+
+        if (!is_dir($path)) {
+            throw new \Exception("Directory not found ${path}", 1);
+        }
+        $this->setLogger($path);
+        $this->logger->info('Launching page loader', ['url' => $url, 'path' => $path]);
+
         $content = $client->get($url)->getBody()->getContents();
         $document = new Document($content);
         $filesDirectory = $this->getFilesDirectoryName($url);
@@ -22,6 +38,7 @@ class PageLoader
                 $document->find('img')[$key]->src = $newImageLink;
                 $imagePath = "{$path}/{$newImageLink}";
                 $client->request('GET', $imageUrl, ['sink' => $imagePath]);
+                $this->logger->info('Imade dowloaded', ['url' => $imageUrl, 'path' => $imagePath]);
             }
         }
 
@@ -35,6 +52,7 @@ class PageLoader
                 $document->find('link')[$key]->href = $newScriptLink;
                 $linkPath = "{$path}/{$newScriptLink}";
                 $client->request('GET', $linkUrl, ['sink' => $linkPath]);
+                $this->logger->info('Link data downloaded', ['url' => $linkUrl, 'path' => $linkPath]);
             }
         }
 
@@ -47,16 +65,23 @@ class PageLoader
                     $document->find('script')[$key]->src = $newScriptLink;
                     $scriptPath = "{$path}/{$newScriptLink}";
                     $client->request('GET', $scriptUrl, ['sink' => $scriptPath]);
+                    $this->logger->info('Script data downloaded', ['url' => $scriptUrl, 'path' => $scriptPath]);
                 }
             }
         }
 
         $content = $document->format()->html();
-        $this->createDir($path);
         $pageFileName = $this->getPageFileName($url);
         $fullFilePath = "{$path}/{$pageFileName}";
         file_put_contents($fullFilePath, $content);
+        $this->logger->info('Page downloaded', ['path' => $fullFilePath]);
         return $fullFilePath;
+    }
+
+    private function setLogger($path)
+    {
+        $pathToLog = "${path}/info.log";
+        $this->logger->pushHandler(new StreamHandler($pathToLog, Logger::INFO));
     }
 
     private function getPageFileName($url): string
@@ -70,6 +95,7 @@ class PageLoader
     {
         if (!is_dir($path)) {
             mkdir($path, 0777, true);
+            $this->logger->info('Directory created', ['path' => $path]);
         }
         return $this;
     }
