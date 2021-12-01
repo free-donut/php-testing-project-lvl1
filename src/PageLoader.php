@@ -9,6 +9,11 @@ use Monolog\Handler\StreamHandler;
 class PageLoader
 {
     private $logger;
+    private const RESOURCES_MAP = [
+            ['tag' => 'img', 'attribute' => 'src'],
+            ['tag' => 'link', 'attribute' => 'href'],
+            ['tag' => 'script', 'attribute' => 'src']
+        ];
 
     public function __construct(Logger $logger)
     {
@@ -17,12 +22,12 @@ class PageLoader
 
     public function downloadPage($url, $path, $client): string
     {
-
-        if (!is_dir($path)) {
+        if (!is_dir($path = $path)) {
             throw new \Exception(sprintf('Directory "%s" not found', $path), 1);
         }
         $this->setLogger($path);
         $this->logger->info('Launching page loader', ['url' => $url, 'path' => $path]);
+
 
         //$content = $client->get($url)->getBody()->getContents();
         $response = $client->get($url);
@@ -32,77 +37,36 @@ class PageLoader
         }
         $content = $response->getBody()->getContents();
         $document = new Document($content);
-        $filesDirectory = $this->getFilesDirectoryName($url);
-        $pathToFiles = "{$path}/{$filesDirectory}";
+        $this->downloadResources($client, $url, $path, $document);
 
-        $images = $document->find('img');
-        foreach ($images as $key => $image) {
-            $imageUrl = $image->src;
-            if ($imageUrl && $this->isLocalResource($imageUrl, $url)) {
-                $this->createDir($pathToFiles);
-                $newImageLink = $this->getResourceLink($imageUrl, $url, $filesDirectory);
-                $document->find('img')[$key]->src = $newImageLink;
-                $imagePath = "{$path}/{$newImageLink}";
-                $client->request('GET', $imageUrl, ['sink' => $imagePath]);
-                $this->logger->info('Imade dowloaded', ['url' => $imageUrl, 'path' => $imagePath]);
-            }
-        }
-
-        $links = $document->find('link');
-        foreach ($links as $key => $link) {
-            $linkUrl = $link->href;
-            if ($linkUrl && $this->isLocalResource($linkUrl, $url)) {
-                $this->createDir($pathToFiles);
-                $newScriptLink = $this->getResourceLink($linkUrl, $url, $filesDirectory);
-                $document->find('link')[$key]->href = $newScriptLink;
-                $linkPath = "{$path}/{$newScriptLink}";
-                $client->request('GET', $linkUrl, ['sink' => $linkPath]);
-                $this->logger->info('Link data downloaded', ['url' => $linkUrl, 'path' => $linkPath]);
-            }
-        }
-
-        $scripts = $document->find('script');
-        foreach ($scripts as $key => $script) {
-            $scriptUrl = $script->src;
-                if ($scriptUrl && $this->isLocalResource($scriptUrl, $url)) {
-                    $this->createDir($pathToFiles);
-                    $newScriptLink = $this->getResourceLink($scriptUrl, $url, $filesDirectory);
-                    $document->find('script')[$key]->src = $newScriptLink;
-                    $scriptPath = "{$path}/{$newScriptLink}";
-                    $resource = \GuzzleHttp\Psr7\Utils::tryFopen($scriptPath, 'w');
-                    $client->request('GET', $scriptUrl, ['sink' => $scriptPath]);
-                    $this->logger->info('Script data downloaded', ['url' => $scriptUrl, 'path' => $scriptPath]);
-                }
-        }
-
-        $content = $document->format()->html();
+        $formattedContent = $document->format()->html();
         $pageFileName = $this->getPageFileName($url);
         $fullFilePath = "{$path}/{$pageFileName}";
-        file_put_contents($fullFilePath, $content);
+        file_put_contents($fullFilePath, $formattedContent);
         $this->logger->info('Page downloaded', ['path' => $fullFilePath]);
         return $fullFilePath;
     }
 
-    private function setLogger($path)
+    private function setLogger(string $path): void
     {
         $pathToLog = "${path}/info.log";
         $this->logger->pushHandler(new StreamHandler($pathToLog, Logger::INFO));
     }
 
-    private function getPageFileName($url): string
+    private function getPageFileName(string $url): string
     {
         $formattedHost = preg_replace('/\W/', '-', parse_url($url, PHP_URL_HOST));
         $formattedPath = preg_replace('/\W/', '-', parse_url($url, PHP_URL_PATH));
         return "{$formattedHost}{$formattedPath}.html";
     }
 
-    private function createDir($path): self
+    private function createDir(string $pathToFiles): self
     {
-        if (!is_dir($path)) {
-            if(mkdir($path, 0777, true)) {
-                $this->logger->info('Directory created', ['path' => $path]);
+        if (!is_dir($pathToFiles)) {
+            if(mkdir($pathToFiles, 0777, true)) {
+                $this->logger->info('Directory created', ['path' => $pathToFiles]);
             } else {
-                $this->logger->error('Directory was not created', ['path' => $path]);
+                $this->logger->error('Directory was not created', ['path' => $pathToFiles]);
             }
         }
         return $this;
@@ -133,5 +97,28 @@ class PageLoader
             return true;
         }
         return parse_url($resourceUrl, PHP_URL_HOST) === parse_url($url, PHP_URL_HOST);
+    }
+
+    private function downloadResources($client, string $url, string $path, Document $document): self
+    {
+        $filesDirectory = $this->getFilesDirectoryName($url);
+        $pathToFiles = "{$path}/{$filesDirectory}";
+        foreach (self::RESOURCES_MAP as $resourceData) {
+            ['tag' => $tag, 'attribute' => $attribute] = $resourceData;
+            $resources = $document->find($tag);
+
+            foreach ($resources as $key => $resource) {
+                $resourceUrl = $resource->$attribute;
+                if ($resourceUrl && $this->isLocalResource($resourceUrl, $url)) {
+                    $this->createDir($pathToFiles);
+                    $newResourceLink = $this->getResourceLink($resourceUrl, $url, $filesDirectory);
+                    $resourcePath = "{$path}/{$newResourceLink}";
+                    $client->request('GET', $resourceUrl, ['sink' => $resourcePath]);
+                    $document->find($tag)[$key]->$attribute = $newResourceLink;
+                    $this->logger->info(ucfirst("{$tag} data downloaded"), ['url' => $resourceUrl, 'path' => $resourcePath]);
+                }
+            }
+        }
+        return $this;
     }
 }
