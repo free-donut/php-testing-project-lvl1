@@ -95,9 +95,9 @@ class PageLoaderTest extends TestCase
         $this->assertFalse($this->root->hasChild($this->path . DIRECTORY_SEPARATOR . 'info.log"'));
 
         //проверить содержимое файла
-        $actualDdata = file_get_contents($actualFilePath);
+        $actualData = file_get_contents($actualFilePath);
         $pathToExpectedData = $this->getFixtureFullPath('expected/expected_simple.html');
-        $this->assertStringEqualsFile($pathToExpectedData, $actualDdata);
+        $this->assertStringEqualsFile($pathToExpectedData, $actualData);
     }
 
     public function testDownloadPageWithImages()
@@ -115,9 +115,9 @@ class PageLoaderTest extends TestCase
         $actualFilePath = $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
 
         //проверить содержимое файла
-        $actualDdata = file_get_contents($actualFilePath);
+        $actualData = file_get_contents($actualFilePath);
         $pathToExpectedData = $this->getFixtureFullPath('expected/expected_with_images.html');
-        $this->assertStringEqualsFile($pathToExpectedData, $actualDdata);
+        $this->assertStringEqualsFile($pathToExpectedData, $actualData);
 
         //проверить наличие изображения в виртуальной ФС
         $imagePath = $this->path . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files/ru-hexlet-io-resources-42.jpg';
@@ -152,9 +152,9 @@ class PageLoaderTest extends TestCase
         $actualFilePath = $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
 
         //проверить содержимое файла
-        $actualDdata = file_get_contents($actualFilePath);
+        $actualData = file_get_contents($actualFilePath);
         $pathToExpectedData = $this->getFixtureFullPath('expected/expected_with_resources.html');
-        $this->assertStringEqualsFile($pathToExpectedData, $actualDdata);
+        $this->assertStringEqualsFile($pathToExpectedData, $actualData);
 
         //проверить наличие ресурса в виртуальной ФС
         $linkPath = $this->path . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files/ru-hexlet-io-resources-application.css';
