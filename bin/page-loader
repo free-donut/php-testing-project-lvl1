@@ -30,7 +30,7 @@ $args = Docopt::handle($doc, array('version'=>'Page loader 1nn.0'));
 $output = $args['--output'];
 $url = $args['<url>'];
 $client = new Client();
-$logger = new Logger('INFO LOGGER');
+$logger = new Logger('LOGGER');
 
 try {
     $pageLoader = new PageLoader($logger);
