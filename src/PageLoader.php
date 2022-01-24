@@ -18,7 +18,7 @@ class PageLoader
 
     public function downloadPage($url, $path, $client): string
     {
-        if (!is_dir($path = $path)) {
+        if (!is_dir($path)) {
             throw new \Exception(sprintf('Directory "%s" not found', $path), 1);
         }
         $this->setLogger($path);
@@ -141,7 +141,7 @@ class PageLoader
             $response = $client->request('GET', $resourceUrl, ['sink' => $resourceFilePath]);
             if (200 !== $code = $response->getStatusCode()) {
                 $this->logger->critical('Uncorrected HTTP response status code when saving a resource', ['code' => $code, 'resourceUrl' => $resourceUrl, 'filePath' => $resourceFilePath]);
-                throw new \Exception(sprintf('HTTP response status code when saving a resource for url "%s" is "%s". Expected code is 200', $url, $code), 1);
+                throw new \Exception(sprintf('HTTP response status code when saving a resource for url "%s" is "%s". Expected code is 200', $resourceUrl, $code), 1);
             }
             $this->logger->info('Resource data saved', $resourceLoggerData);
         }
