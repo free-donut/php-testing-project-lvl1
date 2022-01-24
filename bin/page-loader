@@ -35,7 +35,9 @@ $logger = new Logger('LOGGER');
 try {
     $pageLoader = new PageLoader($logger);
     $path = $pageLoader->downloadPage($url, $output, $client);
+    print_r('Page was successfully downloaded into ');
     print_r($path);
+    print_r(PHP_EOL);
 } catch (\Exception $e) {
     fwrite(STDERR, 'Выброшено исключение:'.$e->getMessage());
     exit($e->getCode());
