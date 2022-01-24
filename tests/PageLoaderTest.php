@@ -81,7 +81,7 @@ class PageLoaderTest extends TestCase
         $pathToData = $this->getFixtureFullPath('data/data_simple.html');
         $data = file_get_contents($pathToData);
         $this->mock->reset();
-        $this->mock->append(new Response(200, ['X-Foo' => 'Bar'], $data));
+        $this->mock->append(new Response(200, [], $data));
         $actualFilePath = $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
 
         //проверить полный путь до файла
@@ -107,7 +107,7 @@ class PageLoaderTest extends TestCase
 
         $pathToData = $this->getFixtureFullPath('data/data_with_images.html');
         $data = file_get_contents($pathToData);
-        $this->mock->append(new Response(200, ['X-Foo' => 'Bar'], $data));
+        $this->mock->append(new Response(200, [], $data));
 
         $pathToImage = $this->getFixtureFullPath('data/resources/42.jpg');
         $imageData = file_get_contents($pathToImage);
@@ -171,5 +171,55 @@ class PageLoaderTest extends TestCase
         $this->assertStringEqualsFile($pathToLinkCanonical, $actualLinkCanonicalData);
         $actualScriptData = file_get_contents($this->root->url() . DIRECTORY_SEPARATOR . $scriptPath);
         $this->assertStringEqualsFile($pathToScript, $actualScriptData);
+    }
+
+    public function testNotFoundDirectory()
+    {
+        $this->expectExceptionMessage(sprintf('Directory "%s" not found', $this->fullPathToFile));
+        $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
+    }
+
+    public function testUncorrectedStatusCode()
+    {
+        $this->root->addChild(vfsStream::newDirectory($this->path));
+        $this->mock->reset();
+        $this->mock->append(new Response(301, []));
+        $this->expectExceptionMessage(sprintf('HTTP response status code for url "%s" is "%s". Expected code is 200', $this->url, 301));
+        $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
+    }
+
+    public function testDirectoryNotCreated()
+    {
+        $this->root->addChild(vfsStream::newDirectory($this->path, 0555));
+        $this->mock->reset();
+        $pathToData = $this->getFixtureFullPath('data/data_with_images.html');
+        $data = file_get_contents($pathToData);
+        $this->mock->append(new Response(200, [], $data));
+
+        $pathToImage = $this->getFixtureFullPath('data/resources/42.jpg');
+        $imageData = file_get_contents($pathToImage);
+        $this->mock->append(new Response(200, [], $imageData));
+
+        $directoryPath = $this->fullPathToFile . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files';
+        $this->expectExceptionMessage(sprintf('Directory was not created, path "%s"', $directoryPath));
+        $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
+    }
+
+    public function testResourceSaving()
+    {
+        $this->root->addChild(vfsStream::newDirectory($this->path));
+        $this->mock->reset();
+        $pathToData = $this->getFixtureFullPath('data/data_with_images.html');
+        $data = file_get_contents($pathToData);
+        $this->mock->append(new Response(200, [], $data));
+
+        $pathToImage = $this->getFixtureFullPath('data/resources/42.jpg');
+        $imageData = file_get_contents($pathToImage);
+        $this->mock->append(new Response(301, [], $imageData));
+
+        $directoryPath = $this->fullPathToFile . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files';
+        $resourceUrl = '/resources/42.jpg';
+        $this->expectExceptionMessage(sprintf('HTTP response status code when saving a resource for url "%s" is "%s". Expected code is 200', $resourceUrl, 301));
+        $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
     }
 }
