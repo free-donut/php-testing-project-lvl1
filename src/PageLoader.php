@@ -21,7 +21,9 @@ class PageLoader
         if (!is_dir($path)) {
             throw new \Exception(sprintf('Directory "%s" not found', $path), 1);
         }
-        $this->setLogger($path);
+
+        $pathToLog = "${path}/info.log";
+        $this->logger->pushHandler(new StreamHandler($pathToLog, Logger::DEBUG));
         $this->logger->info('Launching page loader', ['url' => $url, 'path' => $path]);
 
         //$content = $client->get($url)->getBody()->getContents();
@@ -61,12 +63,6 @@ class PageLoader
         }
         $this->logger->info('Page downloaded', ['path' => $fullFilePath]);
         return $fullFilePath;
-    }
-
-    private function setLogger(string $path): void
-    {
-        $pathToLog = "${path}/info.log";
-        $this->logger->pushHandler(new StreamHandler($pathToLog, Logger::DEBUG));
     }
 
     private function getPageFileName(string $url): string
