@@ -27,4 +27,4 @@ Options:
 
   -o --output <dir>         output dir [default: ./]
 
-[![asciicast](https://asciinema.org/a/XY9W0lacrBWPHjAoL1KVIQ5Dk.svg)](https://asciinema.org/a/XY9W0lacrBWPHjAoL1KVIQ5Dk)
+[![asciicast](https://asciinema.org/a/Bu03L6hAEyTISGbduTn56Pd3K.svg)](https://asciinema.org/a/Bu03L6hAEyTISGbduTn56Pd3K)
