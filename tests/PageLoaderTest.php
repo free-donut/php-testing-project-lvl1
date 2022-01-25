@@ -1,8 +1,8 @@
 <?php
 
-namespace Hexlet\Code\Tests;
+namespace Downloader\Tests;
 
-use Hexlet\Code\PageLoader;
+use Downloader\Downloader;
 use PHPUnit\Framework\TestCase;
 use org\bovigo\vfs\vfsStream;
 use GuzzleHttp\Client;
@@ -49,7 +49,7 @@ class PageLoaderTest extends TestCase
     private $client;
 
     /**
-     * @var PageLoader
+     * @var Downloader
      */
     private $pageLoader;
 
@@ -61,7 +61,7 @@ class PageLoaderTest extends TestCase
         $this->root = vfsStream::setup('root');
         $this->fullPathToFile = $this->root->url() . DIRECTORY_SEPARATOR . $this->path;
         $stub = $this->createMock(Logger::class);
-        $this->pageLoader = new PageLoader($stub);
+        $this->pageLoader = new Downloader($stub);
         $this->mock = new MockHandler([
             new Response(200),
         ]);

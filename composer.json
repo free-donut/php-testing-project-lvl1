@@ -7,11 +7,11 @@
     ],
     "autoload": {
         "psr-4": {
-            "Hexlet\\Code\\": "src/",
-            "Hexlet\\Code\\Tests\\": "tests/"
+            "Downloader\\": "src/",
+            "Downloader\\Tests\\": "tests/"
         },
         "files": [
-        "src/PageLoader.php"
+        "src/Downloader.php"
     ]
     },
     "authors": [

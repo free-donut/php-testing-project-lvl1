@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 
-use Hexlet\Code\PageLoader;
+use Downloader\Downloader;
 use GuzzleHttp\Client;
 use Monolog\Logger;
 
@@ -33,7 +33,7 @@ $client = new Client();
 $logger = new Logger('LOGGER');
 
 try {
-    $pageLoader = new PageLoader($logger);
+    $pageLoader = new Downloader($logger);
     $path = $pageLoader->downloadPage($url, $output, $client);
     print_r('Page was successfully downloaded into ');
     print_r($path);

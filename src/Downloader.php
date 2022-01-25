@@ -1,12 +1,12 @@
 <?php
 
-namespace Hexlet\Code;
+namespace Downloader;
 
 use DiDom\Document;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 
-class PageLoader
+class Downloader
 {
     private $logger;
     private const TAGS = ['img', 'link', 'script'];
