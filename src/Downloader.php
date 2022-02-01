@@ -133,10 +133,10 @@ class Downloader
             $this->createDir($pathToFiles);
             $resourceUri = $resource->href ?? $resource->src;
             $resourceUrl = $url . str_replace($url, '', $resourceUri);
-            $resourceFilePath = "{$path}/" . $this->getResourceFilePath($resourceUrl, $url, $filesDirectory);
+            $resourceFilePath = "{$path}/" . $this->getResourceFilePath($resourceUri, $url, $filesDirectory);
             $resourceLoggerData = [
                 'tag' => $resource->tag,
-                'resourceUrl' => $resourceUrl,
+                'resourceUrl' => $resourceUri,
                 'filePath' => $resourceFilePath
             ];
             $this->logger->debug('Attempt to save resource', $resourceLoggerData);
@@ -146,7 +146,7 @@ class Downloader
                     'Uncorrected HTTP response status code when saving a resource',
                     ['code' => $code, 'resourceUrl' => $resourceUrl, 'filePath' => $resourceFilePath]
                 );
-                $message = sprintf('HTTPstatus code for resource "%s" is "%s". 200 expected', $resourceUrl, $code);
+                $message = sprintf('HTTPstatus code for resource "%s" is "%s". 200 expected', $resourceUri, $code);
                 throw new \Exception($message, 1);
             }
             $this->logger->info('Resource data saved', $resourceLoggerData);
