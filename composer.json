@@ -8,10 +8,12 @@
     "autoload": {
         "psr-4": {
             "Downloader\\": "src/",
+            "Downloader\\Downloader\\": "src/downloader/",
             "Downloader\\Tests\\": "tests/"
         },
         "files": [
-        "src/Downloader.php"
+        "src/Downloader.php",
+        "src/downloader/downloader.php"
     ]
     },
     "authors": [

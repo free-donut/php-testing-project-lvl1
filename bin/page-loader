@@ -1,10 +1,6 @@
 #!/usr/bin/env php
 <?php
 
-use Downloader\Downloader;
-use GuzzleHttp\Client;
-use Monolog\Logger;
-
 $autoloadPath1 = __DIR__ . '/../../../autoload.php';
 $autoloadPath2 = __DIR__ . '/../vendor/autoload.php';
 if (file_exists($autoloadPath1)) {
@@ -29,17 +25,6 @@ DOC;
 $args = Docopt::handle($doc, array('version'=>'Page loader 1nn.0'));
 $output = $args['--output'];
 $url = $args['<url>'];
-$client = new Client();
-$logger = new Logger('LOGGER');
 
-try {
-    $pageLoader = new Downloader($logger);
-    $path = $pageLoader->downloadPage($url, $output, $client);
-    print_r('Page was successfully downloaded into ');
-    print_r($path);
-    print_r(PHP_EOL);
-} catch (\Exception $e) {
-    fwrite(STDERR, sprintf('Application terminated with an error: "%s"%s', $e->getMessage(), PHP_EOL));
-    exit($e->getCode());
-    //echo $e->getMessage();
-}
+$clientClass = '\GuzzleHttp\Client';
+\Downloader\Downloader\downloadPage($url, $output, $clientClass);
