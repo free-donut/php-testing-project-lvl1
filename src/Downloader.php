@@ -5,6 +5,7 @@ namespace Downloader;
 use DiDom\Document;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use GuzzleHttp\Exception\ConnectException;
 
 class Downloader
 {
@@ -90,7 +91,10 @@ class Downloader
 
     private function getResourceFilePath(string $resourceUrl, string $url, string $filesDirectory): string
     {
-        $resourcePath = filter_var($resourceUrl, FILTER_VALIDATE_URL) ? parse_url($resourceUrl, PHP_URL_PATH) : $resourceUrl;
+        $resourcePath = filter_var($resourceUrl, FILTER_VALIDATE_URL) ?
+            parse_url($resourceUrl, PHP_URL_PATH) :
+            $resourceUrl;
+
         if ($resourcePath === parse_url($url, PHP_URL_PATH)) {
             $pageFileName = $this->getPageFileName($url);
             return "{$filesDirectory}/{$pageFileName}";
@@ -127,14 +131,23 @@ class Downloader
         $pathToFiles = "{$path}/{$filesDirectory}";
         foreach ($resources as $resource) {
             $this->createDir($pathToFiles);
-            $resourceUrl = $resource->href ?? $resource->src;
+            $resourceUri = $resource->href ?? $resource->src;
+            $resourceUrl = $url . str_replace($url, '', $resourceUri);
             $resourceFilePath = "{$path}/" . $this->getResourceFilePath($resourceUrl, $url, $filesDirectory);
-            $resourceLoggerData = ['tag' => $resource->tag, 'resourceUrl' => $resourceUrl, 'filePath' => $resourceFilePath];
+            $resourceLoggerData = [
+                'tag' => $resource->tag,
+                'resourceUrl' => $resourceUrl,
+                'filePath' => $resourceFilePath
+            ];
             $this->logger->debug('Attempt to save resource', $resourceLoggerData);
             $response = $client->request('GET', $resourceUrl, ['sink' => $resourceFilePath]);
             if (200 !== $code = $response->getStatusCode()) {
-                $this->logger->critical('Uncorrected HTTP response status code when saving a resource', ['code' => $code, 'resourceUrl' => $resourceUrl, 'filePath' => $resourceFilePath]);
-                throw new \Exception(sprintf('HTTP response status code when saving a resource for url "%s" is "%s". Expected code is 200', $resourceUrl, $code), 1);
+                $this->logger->critical(
+                    'Uncorrected HTTP response status code when saving a resource',
+                    ['code' => $code, 'resourceUrl' => $resourceUrl, 'filePath' => $resourceFilePath]
+                );
+                $message = sprintf('HTTPstatus code for resource "%s" is "%s". 200 expected', $resourceUrl, $code);
+                throw new \Exception($message, 1);
             }
             $this->logger->info('Resource data saved', $resourceLoggerData);
         }
@@ -151,7 +164,7 @@ class Downloader
                 $resource->src = $this->getResourceFilePath($resource->src, $url, $filesDirectory);
                 $this->logger->info("Resource path replaced", ['tag' => $resource->tag, 'newPath' => $resource->src]);
             } else {
-                $this->logger->error("Uncorrected tag atrribute. Resource path is not replaced", ['tag' => $resource->tag]);
+                $this->logger->error("Uncorrected tag atrribute. Path is not replaced", ['tag' => $resource->tag]);
             }
         }
     }

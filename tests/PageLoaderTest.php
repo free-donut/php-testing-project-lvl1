@@ -92,7 +92,7 @@ class PageLoaderTest extends TestCase
         $this->assertTrue($this->root->hasChild($this->path . DIRECTORY_SEPARATOR . $this->expectedFileName));
 
         //проверить отсутствие файла логов в виртуальной ФС
-        $this->assertFalse($this->root->hasChild($this->path . DIRECTORY_SEPARATOR . 'info.log"'));
+        $this->assertFalse($this->root->hasChild($this->path . '/info.log"'));
 
         //проверить содержимое файла
         $actualData = file_get_contents($actualFilePath);
@@ -120,7 +120,7 @@ class PageLoaderTest extends TestCase
         $this->assertStringEqualsFile($pathToExpectedData, $actualData);
 
         //проверить наличие изображения в виртуальной ФС
-        $imagePath = $this->path . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files/ru-hexlet-io-resources-42.jpg';
+        $imagePath = $this->path . '/ru-hexlet-io-courses_files/ru-hexlet-io-resources-42.jpg';
         $this->assertTrue($this->root->hasChild($imagePath));
 
         //сравнить изображения
@@ -157,11 +157,11 @@ class PageLoaderTest extends TestCase
         $this->assertStringEqualsFile($pathToExpectedData, $actualData);
 
         //проверить наличие ресурса в виртуальной ФС
-        $linkPath = $this->path . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files/ru-hexlet-io-resources-application.css';
+        $linkPath = $this->path . '/ru-hexlet-io-courses_files/ru-hexlet-io-resources-application.css';
         $this->assertTrue($this->root->hasChild($linkPath));
-        $linkCanonicalPath = $this->path . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files/ru-hexlet-io-courses.html';
+        $linkCanonicalPath = $this->path . '/ru-hexlet-io-courses_files/ru-hexlet-io-courses.html';
         $this->assertTrue($this->root->hasChild($linkCanonicalPath));
-        $scriptPath = $this->path . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files/ru-hexlet-io-resources-js-runtime.js';
+        $scriptPath = $this->path . '/ru-hexlet-io-courses_files/ru-hexlet-io-resources-js-runtime.js';
         $this->assertTrue($this->root->hasChild($scriptPath));
 
         //сравнить данные ресурсов
@@ -200,7 +200,7 @@ class PageLoaderTest extends TestCase
         $imageData = file_get_contents($pathToImage);
         $this->mock->append(new Response(200, [], $imageData));
 
-        $directoryPath = $this->fullPathToFile . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files';
+        $directoryPath = $this->fullPathToFile . '/ru-hexlet-io-courses_files';
         $this->expectExceptionMessage(sprintf('Directory was not created, path "%s"', $directoryPath));
         $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
     }
@@ -217,9 +217,10 @@ class PageLoaderTest extends TestCase
         $imageData = file_get_contents($pathToImage);
         $this->mock->append(new Response(301, [], $imageData));
 
-        $directoryPath = $this->fullPathToFile . DIRECTORY_SEPARATOR . 'ru-hexlet-io-courses_files';
+        $directoryPath = $this->fullPathToFile . '/ru-hexlet-io-courses_files';
         $resourceUrl = '/resources/42.jpg';
-        $this->expectExceptionMessage(sprintf('HTTP response status code when saving a resource for url "%s" is "%s". Expected code is 200', $resourceUrl, 301));
+        $expectMessage = sprintf('HTTPstatus code for resource "%s" is "%s". 200 expected', $resourceUrl, 301);
+        $this->expectExceptionMessage($expectMessage);
         $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
     }
 }
