@@ -9,6 +9,9 @@ use GuzzleHttp\Exception\ConnectException;
 
 class Downloader
 {
+    /**
+     * @var Logger
+     */
     private $logger;
     private const TAGS = ['img', 'link', 'script'];
 
@@ -38,10 +41,10 @@ class Downloader
 
         $resources = $this->findResources($document);
 
-        if (count($resources)) {
+        if (count($resources) > 0) {
             $this->logger->info('Page resources found', ['count' => count($resources)]);
             $localResorces = $this->filterLocalResources($resources, $url);
-            if (count($localResorces)) {
+            if (count($localResorces) > 0) {
                 $this->logger->info('Local resources found', ['count' => count($localResorces)]);
                 $this->saveResources($localResorces, $client, $url, $path);
                 $this->replaceRecorcesPath($localResorces, $url);

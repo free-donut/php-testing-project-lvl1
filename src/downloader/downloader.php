@@ -6,7 +6,7 @@ use Downloader\Downloader;
 use Monolog\Logger;
 use GuzzleHttp\Exception\ConnectException;
 
-function downloadPage($url, $output, $clientClass)
+function downloadPage(string $url, string $output, string $clientClass): void
 {
     $client = new $clientClass();
     $logger = new Logger('LOGGER');
