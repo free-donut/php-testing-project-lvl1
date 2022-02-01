@@ -183,8 +183,8 @@ class PageLoaderTest extends TestCase
     {
         $this->root->addChild(vfsStream::newDirectory($this->path));
         $this->mock->reset();
-        $this->mock->append(new Response(301, []));
-        $this->expectExceptionMessage(sprintf('HTTP response status code for url "%s" is "%s". Expected code is 200', $this->url, 301));
+        $this->mock->append(new Response(404));
+        $this->expectException(\Exception::class);
         $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
     }
 

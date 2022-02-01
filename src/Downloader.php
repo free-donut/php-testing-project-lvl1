@@ -28,10 +28,7 @@ class Downloader
 
         //$content = $client->get($url)->getBody()->getContents();
         $response = $client->get($url);
-        if (200 !== $code = $response->getStatusCode()) {
-            $this->logger->critical('Uncorrected status code', ['url' => $url, 'code' => $code]);
-            throw new \Exception(sprintf('HTTP response status code for url "%s" is "%s". Expected code is 200', $url, $code), 1);
-        }
+
         $content = $response->getBody()->getContents();
         if (!$content) {
             $this->logger->notice('Page is empty', ['url' => $url]);
