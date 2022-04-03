@@ -5,7 +5,9 @@ namespace Downloader;
 use DiDom\Document;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
-use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Client;
+
+use function PHPUnit\Framework\throwException;
 
 class Downloader
 {
@@ -20,7 +22,7 @@ class Downloader
         $this->logger = $logger;
     }
 
-    public function downloadPage($url, $path, $client): string
+    public function downloadPage(string $url, string $path, Client $client): string
     {
         if (!is_dir($path)) {
             throw new \Exception(sprintf('Directory "%s" not found', $path), 1);
@@ -97,8 +99,12 @@ class Downloader
         $resourcePath = filter_var($resourceUrl, FILTER_VALIDATE_URL) ?
             parse_url($resourceUrl, PHP_URL_PATH) :
             $resourceUrl;
+        if (!is_string($resourcePath)) {
+            $this->logger->critical('Uncorrected resource path', ['resourceUrl' => $resourceUrl]);
+            throw new \Exception(sprintf('Uncorrected resource Url "%s"', $resourceUrl), 1);
+        }
 
-        if ($resourcePath === parse_url($url, PHP_URL_PATH)) {
+        if ($resourcePath === parse_url($url, PHP_URL_PATH)) {// для главной страницы
             $pageFileName = $this->getPageFileName($url);
             return "{$filesDirectory}/{$pageFileName}";
         }
@@ -128,14 +134,17 @@ class Downloader
         }));
     }
 
-    private function saveResources(array $resources, $client, string $url, string $path): void
+    private function saveResources(array $resources, Client $client, string $url, string $path): void
     {
         $filesDirectory = $this->getFilesDirectoryName($url);
         $pathToFiles = "{$path}/{$filesDirectory}";
         foreach ($resources as $resource) {
             $this->createDir($pathToFiles);
             $resourceUri = $resource->href ?? $resource->src;
-            $resourceUrl = $url . str_replace($url, '', $resourceUri);
+            //$resourceUrl = $url . str_replace($url, '', $resourceUri);//url может содержать путь, исправить ошибку Client error: `GET https://ru.hexlet.io/courseshttps://ru.hexlet.io/lessons.rss` resulted in a `404 Not Found` 
+            $resourceUrl = filter_var($resourceUri, FILTER_VALIDATE_URL) ?
+                $resourceUri :
+                "$url$resourceUri";
             $resourceFilePath = "{$path}/" . $this->getResourceFilePath($resourceUri, $url, $filesDirectory);
             $resourceLoggerData = [
                 'tag' => $resource->tag,

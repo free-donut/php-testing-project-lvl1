@@ -70,11 +70,11 @@ class PageLoaderTest extends TestCase
         $this->client = new Client(['handler' => $handlerStack]);
     }
 
-    public function getFixtureFullPath(string $fixtureName): ?string
+    public function getFixtureFullPath(string $fixtureName): string
     {
         $parts = [__DIR__, 'fixtures', $fixtureName];
 
-        return ($path = realpath(implode('/', $parts))) ? $path : null;
+        return ($path = realpath(implode('/', $parts))) ? $path : '';
     }
 
     public function testDownloadPage(): void
@@ -220,7 +220,9 @@ class PageLoaderTest extends TestCase
     private function addMockWhithFixtureData(string $path, int $code = 200): void
     {
         $pathToData = $this->getFixtureFullPath($path);
-        $data = file_get_contents($pathToData);
-        $this->mock->append(new Response($code, [], is_string($data) ? $data : ''));
+        if ($pathToData) {
+            $data = file_get_contents($pathToData);
+            $this->mock->append(new Response($code, [], is_string($data) ? $data : ''));
+        }
     }
 }

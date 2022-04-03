@@ -28,3 +28,12 @@ $url = $args['<url>'];
 
 $clientClass = '\GuzzleHttp\Client';
 \Downloader\Downloader\downloadPage($url, $output, $clientClass);
+try {
+    $path = Downloader\Downloader\downloadPage($url, $output, $clientClass);
+    print_r('Page was successfully downloaded into ');
+    print_r($path);
+    print_r(PHP_EOL);
+} catch (\Exception $e) {
+    fwrite(STDERR, sprintf('Application terminated with an error: "%s"%s', $e->getMessage(), PHP_EOL));
+    exit($e->getCode());
+}
