@@ -3,11 +3,10 @@
 namespace Downloader;
 
 use DiDom\Document;
+use DiDom\Element;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use GuzzleHttp\Client;
-
-use function PHPUnit\Framework\throwException;
 
 class Downloader
 {
@@ -15,29 +14,88 @@ class Downloader
      * @var Logger
      */
     private $logger;
+    /**
+     * @var string
+     */
+    private $url;
+    /**
+     * @var string
+     */
+    private $host;
+    /**
+     * @var string
+     */
+    private $path;
+    /**
+     * @var string
+     */
+    private $filePath;
+    /**
+     * @var Client
+     */
+    private $client;
+    /**
+     * @var string
+     */
+    private $pageFileName;
+    /**
+     * @var string
+     */
+    private $filesDirectory;
     private const TAGS = ['img', 'link', 'script'];
 
-    public function __construct(Logger $logger)
+    public function __construct(string $url, string $filePath, Client $client, Logger $logger)
     {
         $this->logger = $logger;
+        $this->url = $url;
+        $this->filePath = $filePath;
+        $this->client = $client;
+        $this->setParams();
     }
 
-    public function downloadPage(string $url, string $path, Client $client): string
+    private function setParams(): void
     {
-        if (!is_dir($path)) {
-            throw new \Exception(sprintf('Directory "%s" not found', $path), 1);
+        if (!is_dir($this->filePath)) {
+            throw new \Exception(sprintf('Directory "%s" not found', $this->filePath), 1);
         }
 
-        $pathToLog = "${path}/info.log";
-        $this->logger->pushHandler(new StreamHandler($pathToLog, Logger::DEBUG));
-        $this->logger->info('Launching page loader', ['url' => $url, 'path' => $path]);
+        $this->logger->pushHandler(new StreamHandler($this->filePath . '/info.log', Logger::DEBUG));
+        $this->logger->info('Launching page loader', ['url' => $this->url, 'path' => $this->filePath]);
 
+        $host = parse_url($this->url, PHP_URL_HOST);
+        $path = parse_url($this->url, PHP_URL_PATH);
+        if (
+            !is_string($host) ||
+            !is_string($path)
+        ) {
+            $this->logger->critical('Uncorected url', ['url' => $this->url]);
+            throw new \Exception(sprintf('Uncorected url: "%s"', $this->url), 1);
+        }
+        $this->host = $host;
+        $this->path = $path;
+        
+        $formattedHost = preg_replace('/\W/', '-', $this->host);
+        $formattedPath = preg_replace('/\W/', '-', $this->path);
+
+        $this->pageFileName = "{$formattedHost}{$formattedPath}.html";
+        $this->filesDirectory = "{$formattedHost}{$formattedPath}_files";
+    }
+
+    public static function downloadPage(string $url, string $path, Client $client, Logger $logger): string
+    {
+        $downloader = new self($url, $path, $client, $logger);
+        $downloader->setParams();
+        return $downloader->download();
+    }
+
+    public function download(): string
+    {
         //$content = $client->get($url)->getBody()->getContents();
-        $response = $client->get($url);
+        $response = $this->client->get($this->url);
 
         $content = $response->getBody()->getContents();
         if (!$content) {
-            $this->logger->notice('Page is empty', ['url' => $url]);
+            $this->logger->notice('Page is empty', ['url' => $this->url]);
         }
         $document = new Document($content);
 
@@ -45,11 +103,11 @@ class Downloader
 
         if (count($resources) > 0) {
             $this->logger->info('Page resources found', ['count' => count($resources)]);
-            $localResorces = $this->filterLocalResources($resources, $url);
+            $localResorces = $this->filterLocalResources($resources);
             if (count($localResorces) > 0) {
                 $this->logger->info('Local resources found', ['count' => count($localResorces)]);
-                $this->saveResources($localResorces, $client, $url, $path);
-                $this->replaceRecorcesPath($localResorces, $url);
+                $this->saveResources($localResorces);
+                $this->replaceRecorcesPath($localResorces);
             } else {
                 $this->logger->info('Local resources not found');
             }
@@ -58,21 +116,13 @@ class Downloader
         }
 
         $formattedContent = $document->format()->html();
-        $pageFileName = $this->getPageFileName($url);
-        $fullFilePath = "{$path}/{$pageFileName}";
+        $fullFilePath = $this->filePath . '/' . $this->pageFileName;
         if (!file_put_contents($fullFilePath, $formattedContent)) {
             $this->logger->critical('Page data is not saved', ['filePath' => $fullFilePath]);
             throw new \Exception(sprintf('Page data is not saved, file path: "%s"', $fullFilePath), 1);
         }
         $this->logger->info('Page downloaded', ['path' => $fullFilePath]);
         return $fullFilePath;
-    }
-
-    private function getPageFileName(string $url): string
-    {
-        $formattedHost = preg_replace('/\W/', '-', parse_url($url, PHP_URL_HOST));
-        $formattedPath = preg_replace('/\W/', '-', parse_url($url, PHP_URL_PATH));
-        return "{$formattedHost}{$formattedPath}.html";
     }
 
     private function createDir(string $pathToFiles): void
@@ -87,14 +137,7 @@ class Downloader
         }
     }
 
-    private function getFilesDirectoryName(string $url): string
-    {
-        $formattedHost = preg_replace('/\W/', '-', parse_url($url, PHP_URL_HOST));
-        $formattedPath = preg_replace('/\W/', '-', parse_url($url, PHP_URL_PATH));
-        return "{$formattedHost}{$formattedPath}_files";
-    }
-
-    private function getResourceFilePath(string $resourceUrl, string $url, string $filesDirectory): string
+    private function getResourceFilePath(string $resourceUrl): string
     {
         $resourcePath = filter_var($resourceUrl, FILTER_VALIDATE_URL) ?
             parse_url($resourceUrl, PHP_URL_PATH) :
@@ -104,15 +147,17 @@ class Downloader
             throw new \Exception(sprintf('Uncorrected resource Url "%s"', $resourceUrl), 1);
         }
 
-        if ($resourcePath === parse_url($url, PHP_URL_PATH)) {// для главной страницы
-            $pageFileName = $this->getPageFileName($url);
-            return "{$filesDirectory}/{$pageFileName}";
+        if ($resourcePath === $this->path) {// для главной страницы
+            return $this->filesDirectory . '/' . $this->pageFileName;
         }
-        $formattedHost = preg_replace('/\W/', '-', parse_url($url, PHP_URL_HOST));
+        $formattedHost = preg_replace('/\W/', '-', $this->host);
         $formattedPath = str_replace('/', '-', $resourcePath);
-        return "{$filesDirectory}/{$formattedHost}{$formattedPath}";
+        return $this->filesDirectory . "/{$formattedHost}{$formattedPath}";
     }
 
+    /**
+     * @return Element[]
+     */
     private function findResources(Document $document): array
     {
         return array_reduce(self::TAGS, function ($acc, $tag) use ($document) {
@@ -120,9 +165,14 @@ class Downloader
         }, []);
     }
 
-    private function filterLocalResources(array $resources, string $url): array
+    /**
+     * @param Element[] $resources
+     * @return Element[]
+     */
+    private function filterLocalResources(array $resources): array
     {
-        return array_values(array_filter($resources, function ($resource) use ($url) {
+        $host = $this->host;
+        return array_values(array_filter($resources, function ($resource) use ($host) {
             $resourceUrl = $resource->href ?? $resource->src;
             if (!$resourceUrl) {
                 return false;
@@ -130,29 +180,31 @@ class Downloader
             if (filter_var($resourceUrl, FILTER_VALIDATE_URL) === false) {
                 return (strpos($resourceUrl, '//') === false);
             }
-            return parse_url($resourceUrl, PHP_URL_HOST) === parse_url($url, PHP_URL_HOST);
+            return parse_url($resourceUrl, PHP_URL_HOST) === $host;
         }));
     }
 
-    private function saveResources(array $resources, Client $client, string $url, string $path): void
+    /**
+     * @param Element[] $resources
+     */
+    private function saveResources(array $resources): void
     {
-        $filesDirectory = $this->getFilesDirectoryName($url);
-        $pathToFiles = "{$path}/{$filesDirectory}";
+        $pathToFiles = $this->filePath . '/' . $this->filesDirectory;
         foreach ($resources as $resource) {
             $this->createDir($pathToFiles);
             $resourceUri = $resource->href ?? $resource->src;
             //$resourceUrl = $url . str_replace($url, '', $resourceUri);//url может содержать путь, исправить ошибку Client error: `GET https://ru.hexlet.io/courseshttps://ru.hexlet.io/lessons.rss` resulted in a `404 Not Found` 
             $resourceUrl = filter_var($resourceUri, FILTER_VALIDATE_URL) ?
                 $resourceUri :
-                "$url$resourceUri";
-            $resourceFilePath = "{$path}/" . $this->getResourceFilePath($resourceUri, $url, $filesDirectory);
+                $this->url . $resourceUri;
+            $resourceFilePath = $this->filePath . '/' . $this->getResourceFilePath($resourceUri);
             $resourceLoggerData = [
                 'tag' => $resource->tag,
                 'resourceUrl' => $resourceUri,
                 'filePath' => $resourceFilePath
             ];
             $this->logger->debug('Attempt to save resource', $resourceLoggerData);
-            $response = $client->request('GET', $resourceUrl, ['sink' => $resourceFilePath]);
+            $response = $this->client->request('GET', $resourceUrl, ['sink' => $resourceFilePath]);
             if (200 !== $code = $response->getStatusCode()) {
                 $this->logger->critical(
                     'Uncorrected HTTP response status code when saving a resource',
@@ -165,15 +217,17 @@ class Downloader
         }
     }
 
-    private function replaceRecorcesPath(array $resources, string $url): void
+    /**
+     * @param Element[] $resources
+     */
+    private function replaceRecorcesPath(array $resources): void
     {
-        $filesDirectory = $this->getFilesDirectoryName($url);
         foreach ($resources as $resource) {
-            if ($resource->href) {
-                $resource->href = $this->getResourceFilePath($resource->href, $url, $filesDirectory);
+            if (isset($resource->href)) {
+                $resource->href = $this->getResourceFilePath($resource->href);
                 $this->logger->info("Resource path replaced", ['tag' => $resource->tag, 'newPath' => $resource->href]);
-            } elseif ($resource->src) {
-                $resource->src = $this->getResourceFilePath($resource->src, $url, $filesDirectory);
+            } elseif (isset($resource->src)) {
+                $resource->src = $this->getResourceFilePath($resource->src);
                 $this->logger->info("Resource path replaced", ['tag' => $resource->tag, 'newPath' => $resource->src]);
             } else {
                 $this->logger->error("Uncorrected tag atrribute. Path is not replaced", ['tag' => $resource->tag]);

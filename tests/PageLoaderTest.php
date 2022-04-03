@@ -50,9 +50,9 @@ class PageLoaderTest extends TestCase
     private $client;
 
     /**
-     * @var Downloader
+     * @var Logger
      */
-    private $pageLoader;
+    private $loggerStub;
 
     public function setUp(): void
     {
@@ -61,8 +61,7 @@ class PageLoaderTest extends TestCase
         $this->path = 'path/to/file';
         $this->root = vfsStream::setup('root');
         $this->fullPathToFile = $this->root->url() . DIRECTORY_SEPARATOR . $this->path;
-        $stub = $this->createMock(Logger::class);
-        $this->pageLoader = new Downloader($stub);
+        $this->loggerStub = $this->createMock(Logger::class);
         $this->mock = new MockHandler([
             new Response(200),
         ]);
@@ -82,7 +81,7 @@ class PageLoaderTest extends TestCase
         $this->root->addChild(vfsStream::newDirectory($this->path));
         $this->mock->reset();
         $this->addMockWhithFixtureData('data/data_simple.html');
-        $actualFilePath = $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
+        $actualFilePath = Downloader::downloadPage($this->url, $this->fullPathToFile, $this->client, $this->loggerStub);
 
         //проверить полный путь до файла
         $expextedFilePath = $this->fullPathToFile . DIRECTORY_SEPARATOR . $this->expectedFileName;
@@ -111,7 +110,7 @@ class PageLoaderTest extends TestCase
         $this->addMockWhithFixtureData('data/data_with_images.html');
         $this->addMockWhithFixtureData('data/resources/42.jpg');
 
-        $actualFilePath = $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
+        $actualFilePath = Downloader::downloadPage($this->url, $this->fullPathToFile, $this->client, $this->loggerStub);
 
         //проверить содержимое файла
         $actualData = file_get_contents($actualFilePath);
@@ -143,7 +142,7 @@ class PageLoaderTest extends TestCase
         $this->addMockWhithFixtureData('data/data_with_resources.html');
         $this->addMockWhithFixtureData('data/resources/js/runtime.js');
 
-        $actualFilePath = $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
+        $actualFilePath = Downloader::downloadPage($this->url, $this->fullPathToFile, $this->client, $this->loggerStub);
 
         //проверить содержимое файла
         $actualData = file_get_contents($actualFilePath);
@@ -179,7 +178,7 @@ class PageLoaderTest extends TestCase
     public function testNotFoundDirectory(): void
     {
         $this->expectExceptionMessage(sprintf('Directory "%s" not found', $this->fullPathToFile));
-        $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
+        Downloader::downloadPage($this->url, $this->fullPathToFile, $this->client, $this->loggerStub);
     }
 
     public function testUncorrectedStatusCode(): void
@@ -188,7 +187,7 @@ class PageLoaderTest extends TestCase
         $this->mock->reset();
         $this->mock->append(new Response(404));
         $this->expectException(\Exception::class);
-        $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
+        Downloader::downloadPage($this->url, $this->fullPathToFile, $this->client, $this->loggerStub);
     }
 
     public function testDirectoryNotCreated(): void
@@ -200,7 +199,7 @@ class PageLoaderTest extends TestCase
 
         $directoryPath = $this->fullPathToFile . '/ru-hexlet-io-courses_files';
         $this->expectExceptionMessage(sprintf('Directory was not created, path "%s"', $directoryPath));
-        $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
+        Downloader::downloadPage($this->url, $this->fullPathToFile, $this->client, $this->loggerStub);
     }
 
     public function testResourceSaving(): void
@@ -214,7 +213,7 @@ class PageLoaderTest extends TestCase
         $resourceUrl = '/resources/42.jpg';
         $expectMessage = sprintf('HTTPstatus code for resource "%s" is "%s". 200 expected', $resourceUrl, 301);
         $this->expectExceptionMessage($expectMessage);
-        $this->pageLoader->downloadPage($this->url, $this->fullPathToFile, $this->client);
+        Downloader::downloadPage($this->url, $this->fullPathToFile, $this->client, $this->loggerStub);
     }
 
     private function addMockWhithFixtureData(string $path, int $code = 200): void
